@@ -23,8 +23,8 @@ src/test/                    tests con PostgreSQL y RabbitMQ reales (Testcontain
 ```
 
 El código gRPC se genera desde `proto/orders.proto` y `proto/catalog.proto` en cada build
-(plugin `protobuf-maven-plugin`) y no se sube al repo. Por eso el Dockerfile se construye
-desde la raíz del repo.
+(plugin `protobuf-maven-plugin`) y no se sube al repo. Los `.proto` son una copia de
+`TCGBackend/proto` (ver "Contratos" más abajo).
 
 ## La saga desde el lado de orders
 
@@ -61,16 +61,16 @@ evento se reenvía con el mismo `eventId`, y los consumidores ya descartan los r
 Requisitos: Java 21 o superior y Docker. **No hace falta instalar Maven**: `./mvnw` lo descarga.
 
 ```bash
-# desde la raíz del repo: dependencias + catalog-service (orders le pide los precios)
+# desde TCGBackend: dependencias + catalog-service (orders le pide los precios)
 docker compose up -d postgres rabbitmq catalog-service
 docker compose run --rm --entrypoint /app/seed catalog-service
 
-# desde services/orders-service
+# desde este repo
 make run     # servidor en :50052
 make test    # necesita Docker corriendo (Testcontainers)
 ```
 
-O todo con Docker, desde la raíz:
+O todo con Docker, desde TCGBackend:
 
 ```bash
 docker compose up -d --build orders-service inventory-service
@@ -120,3 +120,9 @@ grpcurl -plaintext -d '{"user_id":"usr_ash","order_id":"ord_..."}' \
 - Los montos `int64` (`*_cents`) aparecen como string en el JSON de grpcurl; con
   `@grpc/proto-loader` conviene usar `longs: Number`.
 - Si inventory-service nunca responde, el pedido queda en `PENDING` (no hay timeout del lado de orders).
+
+## Contratos
+
+Los archivos de `proto/` son una **copia** de los de `TCGBackend/proto`, que es la fuente
+de verdad. No se editan aquí: el cambio se acuerda con el equipo, se hace en `TCGBackend` y
+se copia con `./scripts/sync-proto.sh` (desde TCGBackend).
